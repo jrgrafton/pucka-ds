@@ -14,14 +14,18 @@ typedef struct{
 
 //Const definitions
 #define DEBUG				//Comment out to turn off debug mode
-const u16 SCREENHOLE =48;
-
+const u16 SCREENHOLE =48;	//How big percieved hole between screens is
 const u16 BORDER = 4;	//Border in pixels around screen (used for collisions)
 
+//Defines for width and height of screen
+const u16 SHEIGHT = 191;
+const u16 SWIDTH = 255;
+
 //Defines for max x and y for an entity to be
-const u16 MAXX = 255 - BORDER;
-const u16 MAXY = 191 - BORDER;
-const u16 MINXY = 0+BORDER;
+const u16 MAXX = SWIDTH - BORDER;
+const u16 MAXY = SHEIGHT - BORDER;
+const u16 MINX = 0+BORDER;
+const u16 MINY = 0+BORDER;
 
 //Function definitions
 void debug(s16 xpos,s16 ypos,char* message);
