@@ -13,6 +13,8 @@
 entity puck;
 entity handle;
 
+s16 dist = 0;
+
 int main(void){
 	//Initialise everything
 	init();
@@ -63,21 +65,23 @@ void processInput(void){
 		Stylus.oldVx=0;
 	}
 
+
 	//First check if we are hooked or touching
 	if (PA_SpriteTouched(handle.spriteIndex)||hooked){
-		handle.x = sx;
-		handle.y = sy;
+		handle.x = sx<<8;
+		handle.y = sy<<8;
 		hooked=1;
 	}
+
 	//If we moved sprite out of bounds then move it back (limit is 255x 191y)
-	s16 hx = handle.x;
-	s16 hy = handle.y;
+	s16 hx = handle.getX();
+	s16 hy = handle.getY();
 	
 	hx = (hx-handle.radius<MINX)? handle.radius+MINX:(hx+handle.radius>MAXX)? MAXX-handle.radius:hx;
 	hy = (hy-handle.radius<MINY)? handle.radius:(hy+handle.radius>MAXY)? MAXY-handle.radius:hy;
 	
-	handle.x=hx;
-	handle.y=hy;
+	handle.x=hx<<8;
+	handle.y=hy<<8;
 }
 
 /**
@@ -86,13 +90,13 @@ Do drawing function
 void doDrawing(void){
 	// Since collision is done between top right of one object and centre of moving puc must offset by half sprite size (16px)
 	//This draws the moving sprite
-	PA_DualSetSpriteXY(puck.spriteIndex, puck.x-16, puck.y-16);
+	PA_DualSetSpriteXY(puck.spriteIndex, puck.getX()-16, puck.getY()-16);
 	
 	//Draw the handle
 	PA_SetSpriteXY(0, // screen
 		handle.spriteIndex, // sprite
-		handle.x-16, // x position
-		handle.y-16); // y...
+		handle.getX()-16, // x position
+		handle.getY()-16); // y...
 }
 
 /**
@@ -102,60 +106,59 @@ void doCollisions(void){
 	//Get the square of the max distance
 	u16 maxDistance = (puck.radius+handle.radius)*(puck.radius+handle.radius);
 	// Collision between puck and handle note PA-DISTANCE returns the distance squared 
-	if (PA_Distance(handle.x, handle.y, puck.x, puck.y-192-SCREENHOLE) < maxDistance) {
-		// Collision, so we'l change the pucks speed to move it out of our 'raquette'
-		u16 angle = PA_GetAngle(handle.x, handle.y, puck.x, puck.y-192-SCREENHOLE); // New direction angle
-		u16 overlapDistance = (maxDistance-PA_Distance(handle.x, handle.y, puck.x, puck.y-192-SCREENHOLE))/(puck.radius+handle.radius);
-
+	if (PA_Distance(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE) < maxDistance) {
+		u16 overlapDistance = (maxDistance-PA_Distance(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE))/(puck.radius+handle.radius);
 		
-		// The closer they are, the harder the hit was, need to divide it after since the numbers we are dealing
-		// with are still squared
-		//u16 speed = (maxDistance-PA_Distance(handle.x, handle.y, puck.x, puck.y-192-SCREENHOLE))/(puck.radius+handle.radius); 
- 		
 		u16 handleSpeed = ((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2)+1;
 		if(puck.speed>0){puck.speed-=2;}
 		if(handleSpeed>puck.speed){puck.speed=handleSpeed;}
+		
+
+		u16 angle = PA_GetAngle(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE); 
 
 		puck.angle = angle;
 		puck.vx = PA_Cos(angle);
 		puck.vy = -PA_Sin(angle);
+		
+		//Displace handle so its outside of puck (move handle away from pucks trajectory)
+		handle.x -= puck.vx*overlapDistance;
+		handle.y -= puck.vy*overlapDistance;
 
-		//Displace puck so its outside of handle
-		puck.x += (puck.vx*overlapDistance)/257;
-		puck.y += (puck.vy*overlapDistance)/257;
+		//Displace puck so its outside of handle move (move puck along its trajectory)
+		puck.x += puck.vx*overlapDistance;
+		puck.y += puck.vy*overlapDistance;
 
-		//Displace handle so its outside of puck
-		handle.x -= (puck.vx*overlapDistance)/257;
-		handle.y -= (puck.vy*overlapDistance)/257;
+		dist=overlapDistance;
+
 	}
 	
 	//Add velocity to current puck position (one that moves by itself)
 	//Note: divide by 257 instead of >>8 because of 2s compliment issues
 	//E.g 510>>8 = 1 but -510>>8 = -2 (also not 256 cause that gets coverted
 	//to bit shift automatically WOULD LIKE SOMEONE TO FULLY EXPLAIN THIS TO ME (JAMES GRAFTON)
-	puck.x += (puck.vx*puck.speed)/257;
-	puck.y += (puck.vy*puck.speed)/257;
+	puck.x += puck.vx*puck.speed;
+	puck.y += puck.vy*puck.speed;
 
 
 	// Collision with left or right walls
-	if ((puck.x - puck.radius <= MINX)) {
+	if ((puck.getX() - puck.radius < MINX)) {
 		puck.vx = -puck.vx;
-		puck.x=MINX+puck.radius;
+		puck.x=(MINX+puck.radius)<<8;
 	}
-	else if ((puck.x + puck.radius >= MAXX)){
+	else if ((puck.getX() + puck.radius > MAXX)){
 		puck.vx = - puck.vx;
-		puck.x=MAXX-puck.radius;
+		puck.x=(MAXX-puck.radius)<<8;
 	}
 
 	// Collision with top or bottom walls
-	if ((puck.y -puck.radius <= MINY)){
+	if ((puck.getY() -puck.radius < MINY)){
 		puck.vy = -puck.vy;
-		puck.y=MINY+puck.radius;
+		puck.y=(MINY+puck.radius)<<8;
 	}
 
-	else if ((puck.y + puck.radius > SHEIGHT + MAXY + SCREENHOLE)){
+	else if ((puck.getY() + puck.radius > SHEIGHT + MAXY + SCREENHOLE)){
 		puck.vy = - puck.vy;
-		puck.y= SHEIGHT + MAXY + SCREENHOLE - puck.radius;
+		puck.y= (SHEIGHT + MAXY + SCREENHOLE - puck.radius)<<8;
 	}
 }
 
@@ -186,16 +189,16 @@ void init(void){
 	
 	// This'll be the handle...(only visable on bottom screen)
 	PA_CreateSprite(0, 0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, 16, 16); 	
-	handle.x = 16; 
-	handle.y = 16;//(MAY NEED TO INITIALISE VELOCITY FIELDS AT LATER DATE)
+	handle.x = 16<<8; 
+	handle.y = 16<<8;//(MAY NEED TO INITIALISE VELOCITY FIELDS AT LATER DATE)
 	handle.spriteIndex=0;
 	handle.width=handle.height=32;
 	handle.radius=16;
 	
 	// This will be the puck (sprite number,reference to sprite, size of sprite,colour mode,pallate,xloc,yloc)
 	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 0, 128-16, 96-16); 
-	puck.x = 128; 
-	puck.y = 96+192+SCREENHOLE; // central position on bottom screen
+	puck.x = 128<<8; 
+	puck.y = (96+192+SCREENHOLE)<<8; // central position on bottom screen
 	puck.vx = 0; 
 	puck.vy = 0; // No speed
 	puck.spriteIndex=1;
@@ -214,10 +217,10 @@ void print_debug(void){
 	//Debug stuff for velocity (printf in lib doesnt support \n)
 	PA_ClearTextBg(1);
 	PA_OutputText(1, 0, 1, "Velocity is: x:%d y:%d",puck.vx,puck.vy);
-	PA_OutputText(1, 0, 2, "Positon is: x:%d y:%d",puck.x,puck.y);
+	PA_OutputText(1, 0, 2, "Positon is: x:%d y:%d",puck.getX(),puck.getY());
 	PA_OutputText(1, 0, 3, "Speed is: %d",puck.speed);
 	PA_OutputText(1, 0, 4, "Angle: %d",puck.angle);
-	PA_OutputText(1, 0, 5, "Stylus velocity is: %d",((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2));
+	PA_OutputText(1, 0, 5, "Overlap is: %d",dist);
 }
 
 /**
