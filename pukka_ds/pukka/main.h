@@ -21,7 +21,7 @@ typedef struct{
 }entity;
 
 //Const definitions
-#define DEBUG				//Comment out to turn off debug mode
+//#define DEBUG				//Comment out to turn off debug mode
 const u16 SCREENHOLE =48;	//How big percieved hole between screens is
 const u16 BORDER = 4;	//Border in pixels around screen (used for collisions)
 
@@ -35,14 +35,19 @@ const u16 MAXY = SHEIGHT - BORDER;
 const u16 MINX = 0+BORDER;
 const u16 MINY = 0+BORDER;
 
+//Define for square root LUT size
+const u16 LUTSIZE = 1156;
+
 //Function definitions
 void debug(s16 xpos,s16 ypos,char* message);
 void applyFriction(entity* object);
 void doCollisions(void);
+u32 getDistance(s16 x1,s16 y1,s16 x2,s16 y2);
 void doDrawing(void);
 void init(void);
 void print_debug(void);
 void processInput(void);
+inline u32 square(u32 a);
 
 
 #endif

@@ -13,7 +13,11 @@
 entity puck;
 entity handle;
 
-s16 dist = 0;
+//Lookup table for square root used to calculate overlap distance
+//For it to get to that point x and y locations of entitys must be within
+//At least the product of their radii (give or take 10% for fast function innacruacies)
+//Hence LUT should be (34*34) = 1156 big
+u32 sqrtLUT[1156];
 
 int main(void){
 	//Initialise everything
@@ -107,11 +111,11 @@ void doCollisions(void){
 	u16 maxDistance = (puck.radius+handle.radius)*(puck.radius+handle.radius);
 	// Collision between puck and handle note PA-DISTANCE returns the distance squared 
 	if (PA_Distance(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE) < maxDistance) {
-		u16 overlapDistance = (maxDistance-PA_Distance(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE))/(puck.radius+handle.radius);
-		
+		u32 overlapDistance = ((puck.radius+handle.radius)-getDistance(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE));
 		u16 handleSpeed = ((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2)+1;
 		if(puck.speed>0){puck.speed-=2;}
 		if(handleSpeed>puck.speed){puck.speed=handleSpeed;}
+		if(puck.speed>20){puck.speed=20;}
 		
 
 		u16 angle = PA_GetAngle(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE); 
@@ -127,9 +131,6 @@ void doCollisions(void){
 		//Displace puck so its outside of handle move (move puck along its trajectory)
 		puck.x += puck.vx*overlapDistance;
 		puck.y += puck.vy*overlapDistance;
-
-		dist=overlapDistance;
-
 	}
 	
 	//Add velocity to current puck position (one that moves by itself)
@@ -161,6 +162,20 @@ void doCollisions(void){
 		puck.y= (SHEIGHT + MAXY + SCREENHOLE - puck.radius)<<8;
 	}
 }
+
+/**
+** Get Proper Euclidian dist
+**/
+u32 getDistance(s16 x1,s16 y1,s16 x2,s16 y2){
+	u32 lookupValue = square(x1-x2)+square(y1-y2);
+	//Add one to because of float -> int truncation
+	u32 result = sqrtLUT[lookupValue]+1;
+	return result;
+}
+/**
+** Inline square function
+**/
+inline u32 square(u32 a){ return a*a;}
 
 /**
 Initialise everything
@@ -207,6 +222,11 @@ void init(void){
 	
 	//Set the virtual distance in screen to SCREENHOLE
 	PA_SetScreenSpace(SCREENHOLE);
+
+	//Initialise sqrtLUT
+	for(u32 i =0;i<LUTSIZE;i++){
+		sqrtLUT[i] = (u32)sqrt(i);
+	}
 }
 
 /**
@@ -220,7 +240,6 @@ void print_debug(void){
 	PA_OutputText(1, 0, 2, "Positon is: x:%d y:%d",puck.getX(),puck.getY());
 	PA_OutputText(1, 0, 3, "Speed is: %d",puck.speed);
 	PA_OutputText(1, 0, 4, "Angle: %d",puck.angle);
-	PA_OutputText(1, 0, 5, "Overlap is: %d",dist);
 }
 
 /**
