@@ -19,6 +19,12 @@ entity handle;
 //Hence LUT should be (34*34) = 1156 big
 u32 sqrtLUT[1156];
 
+//Has a goal just been scored
+int goal = 0;
+
+//Is the stylus currently hooked to the handle
+int hooked =0;
+
 int main(void){
 	//Initialise everything
 	init();
@@ -33,9 +39,6 @@ int main(void){
 
 		//Do drawing
 		doDrawing();
-	
-		//Apply friction
-		applyFriction(&puck);
 		
 		//Print debug stuff (if in debug mode)
 		#ifdef DEBUG
@@ -54,9 +57,6 @@ Process input function
 void processInput(void){
 	//Update stylus position
 	PA_UpdateStylus();
-	
-	//Are we hooked?
-	static int hooked =0;
 	
 	//Get stylus position
 	s16 sx = Stylus.X;
@@ -101,7 +101,11 @@ void doDrawing(void){
 		handle.spriteIndex, // sprite
 		handle.getX()-16, // x position
 		handle.getY()-16); // y...
-}
+
+	//Draw the goals
+	//Bottom one
+	PA_Draw8bitLineEx(0,(SWIDTH/2)-(GOALWIDTH/2),PHEIGHT-GOALHEIGHT,(SWIDTH/2)+(GOALWIDTH/2), PHEIGHT-GOALHEIGHT,1,1);  
+}	
 
 /**
 Do collisions function
@@ -112,9 +116,11 @@ void doCollisions(void){
 	// Collision between puck and handle note PA-DISTANCE returns the distance squared 
 	if (PA_Distance(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE) < maxDistance) {
 		u32 overlapDistance = ((puck.radius+handle.radius)-getDistance(handle.getX(), handle.getY(), puck.getX(), puck.getY()-192-SCREENHOLE));
-		u16 handleSpeed = ((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2)+1;
+		
+		
+		handle.speed = ((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2)+1;
 		if(puck.speed>0){puck.speed-=2;}
-		if(handleSpeed>puck.speed){puck.speed=handleSpeed;}
+		if(handle.speed>puck.speed){puck.speed=handle.speed;}
 		if(puck.speed>20){puck.speed=20;}
 		
 
@@ -134,13 +140,9 @@ void doCollisions(void){
 	}
 	
 	//Add velocity to current puck position (one that moves by itself)
-	//Note: divide by 257 instead of >>8 because of 2s compliment issues
-	//E.g 510>>8 = 1 but -510>>8 = -2 (also not 256 cause that gets coverted
-	//to bit shift automatically WOULD LIKE SOMEONE TO FULLY EXPLAIN THIS TO ME (JAMES GRAFTON)
 	puck.x += puck.vx*puck.speed;
 	puck.y += puck.vy*puck.speed;
-
-
+	
 	// Collision with left or right walls
 	if ((puck.getX() - puck.radius < MINX)) {
 		puck.vx = -puck.vx;
@@ -158,8 +160,19 @@ void doCollisions(void){
 	}
 
 	else if ((puck.getY() + puck.radius > SHEIGHT + MAXY + SCREENHOLE)){
-		puck.vy = - puck.vy;
-		puck.y= (SHEIGHT + MAXY + SCREENHOLE - puck.radius)<<8;
+		//Have we let in a goal?
+		if(puck.getX()>(SWIDTH/2)-(GOALWIDTH/2)&&puck.getX()<(SWIDTH/2)+(GOALWIDTH/2)){
+			goal = 1;
+			puck.vx = 0;
+			//Has the puck gone all the way into the goal?
+			if(puck.getY()-puck.radius>SHEIGHT + MAXY + SCREENHOLE){
+				goalScored();
+			}
+		}
+		else{
+			puck.vy = - puck.vy;
+			puck.y= (SHEIGHT + MAXY + SCREENHOLE - puck.radius)<<8;
+		}
 	}
 }
 
@@ -184,13 +197,17 @@ void init(void){
 	//Init libs
 	PA_Init();
 	PA_InitVBL();
+	PA_SetBgPalCol(0, 1, PA_RGB(10,10, 0));
+	PA_Init8bitBg(0,0);
 
 	PA_EasyBgLoad(1, // screen
 			1, // background number (0-3)
 			table_top); // Background name, used by PAGfx...
 	PA_EasyBgLoad(0, // screen
-			1, // background number (0-3)
+			2, // background number (0-3)
 			table_bottom); // Background name, used by PAGfx...
+	
+	
 
 	//Init text on top screen background 0
 	PA_InitText(1,0); // On the top screen
@@ -204,21 +221,18 @@ void init(void){
 	
 	// This'll be the handle...(only visable on bottom screen)
 	PA_CreateSprite(0, 0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, 16, 16); 	
-	handle.x = 16<<8; 
-	handle.y = 16<<8;//(MAY NEED TO INITIALISE VELOCITY FIELDS AT LATER DATE)
 	handle.spriteIndex=0;
 	handle.width=handle.height=32;
 	handle.radius=16;
 	
 	// This will be the puck (sprite number,reference to sprite, size of sprite,colour mode,pallate,xloc,yloc)
 	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 0, 128-16, 96-16); 
-	puck.x = 128<<8; 
-	puck.y = (96+192+SCREENHOLE)<<8; // central position on bottom screen
-	puck.vx = 0; 
-	puck.vy = 0; // No speed
 	puck.spriteIndex=1;
 	puck.width=puck.height=30;
 	puck.radius=15;
+
+	//Position current entities
+	resetEntities();
 	
 	//Set the virtual distance in screen to SCREENHOLE
 	PA_SetScreenSpace(SCREENHOLE);
@@ -238,13 +252,33 @@ void print_debug(void){
 	PA_ClearTextBg(1);
 	PA_OutputText(1, 0, 1, "Velocity is: x:%d y:%d",puck.vx,puck.vy);
 	PA_OutputText(1, 0, 2, "Positon is: x:%d y:%d",puck.getX(),puck.getY());
-	PA_OutputText(1, 0, 3, "Speed is: %d",puck.speed);
+	PA_OutputText(1, 0, 3, "Speed is: %d",handle.speed);
 	PA_OutputText(1, 0, 4, "Angle: %d",puck.angle);
+	PA_OutputText(1, 0, 5, "Goal is: %d",goal);
 }
 
 /**
-Function to apply friction
+**Function that gets called when someone scores
 **/
-void applyFriction(entity* object){
-	//object->speed-=1;
+void goalScored(){
+	resetEntities();
+	goal=0;
+	hooked =0;
+}
+/**
+**Call this to reset entities
+**/
+void resetEntities(){
+	puck.x = SWIDTH/2<<8; 
+	puck.y = (96+192+SCREENHOLE)<<8; // central position on bottom screen
+	puck.vx = 0; 
+	puck.vy = 0; // No trajectory
+	puck.speed = 0;
+
+	handle.x = SWIDTH/2<<8; 
+	handle.y = SHEIGHT-BORDER-handle.radius<<8;
+	handle.vx = 0;
+	handle.vy = 0;
+	handle.speed = 0;
+
 }
