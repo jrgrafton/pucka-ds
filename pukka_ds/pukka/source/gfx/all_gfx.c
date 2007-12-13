@@ -2,6 +2,9 @@
 
 //This file contains all the .c, for easier inclusion in a project
 
+#ifndef ALL_GFX_C
+#define ALL_GFX_C
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,5 +30,7 @@ PAGfx_struct table_bottom = {(void*)table_bottom_Map, 768, (void*)table_bottom_T
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 

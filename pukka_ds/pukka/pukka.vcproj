@@ -46,6 +46,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\source\InGame.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\source\main.cpp"
 				>
 			</File>
@@ -56,7 +60,15 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\main.h"
+				RelativePath=".\header\InGame.h"
+				>
+			</File>
+			<File
+				RelativePath=".\header\main.h"
+				>
+			</File>
+			<File
+				RelativePath=".\header\state.h"
 				>
 			</File>
 		</Filter>
