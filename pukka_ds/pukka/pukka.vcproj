@@ -46,7 +46,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\source\InGame.cpp"
+				RelativePath=".\source\game_object.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\source\in_game.cpp"
 				>
 			</File>
 			<File
@@ -60,7 +64,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\header\InGame.h"
+				RelativePath=".\header\game_object.h"
+				>
+			</File>
+			<File
+				RelativePath=".\header\in_game.h"
 				>
 			</File>
 			<File

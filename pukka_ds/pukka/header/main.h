@@ -6,7 +6,8 @@
 
 //Internal includes
 #include "../header/state.h"
-#include "../header/InGame.h"
+#include "../header/in_game.h"
+#include "../header/game_object.h"
 
 //Const definitions
 #define DEBUG				//Comment out to turn off debug mode

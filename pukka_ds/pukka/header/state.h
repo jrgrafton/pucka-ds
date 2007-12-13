@@ -32,8 +32,4 @@ class State {
 		//Allocate resources for this state
 		virtual void init() {};
 };
-
-//Classes that inherit from main state object
-class MainMenu : public State{};
-
 #endif
