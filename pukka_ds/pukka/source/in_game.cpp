@@ -8,6 +8,7 @@
 //Fields of game entitys
 GameObject * puck;
 GameObject * handle;
+GameObject * computerHandle;
 
 //Lookup table for square root used to calculate overlap distance
 //For it to get to that point x and y locations of entitys must be within
@@ -66,17 +67,24 @@ void InGame::init(){
 	
 	// This'll be the handle->..(only visable on bottom screen)
 	handle = new GameObject();
-	PA_CreateSprite(0, 0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, 16, 16); 	
+	PA_CreateSprite(0, 0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-handle->radius,SHEIGHT-BORDER-(handle->radius*2)); 	
 	handle->spriteIndex=0;
 	handle->width=handle->height=32;
 	handle->radius=16;
 	
 	// This will be the puck (sprite number,reference to sprite, size of sprite,colour mode,pallate,xloc,yloc)
 	puck = new GameObject();
-	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 0, 128-16, 96-16); 
+	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 0, SWIDTH/2, SHEIGHT+SCREENHOLE+SHEIGHT/2); 
 	puck->spriteIndex=1;
 	puck->width=puck->height=30;
 	puck->radius=15;
+
+	// This'll be the computer (only visable on top screen)
+	computerHandle = new GameObject(); 	
+	computerHandle->spriteIndex=2;
+	computerHandle->width=handle->height=32;
+	computerHandle->radius=16;
+	PA_CreateSprite(0, 2,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-computerHandle->radius,BORDER);
 
 	//Reset state
 	reset();
@@ -104,6 +112,12 @@ void InGame::reset(){
 	handle->vx = 0;
 	handle->vy = 0;
 	handle->speed = 0;
+
+	computerHandle->x = SWIDTH/2<<8; 
+	computerHandle->y = BORDER+handle->radius<<8;
+	computerHandle->vx = 0;
+	computerHandle->vy = 0;
+	computerHandle->speed = 0;
 }
 /**
 **InGame run
@@ -114,6 +128,9 @@ void InGame::run(){
 		//Process input
 		processInput();
 		
+		//Do intel
+		doIntel();
+
 		//Do collisions
 		doCollisions();
 
@@ -165,7 +182,13 @@ void InGame::processInput(void){
 	handle->x=hx<<8;
 	handle->y=hy<<8;
 }
-
+/**
+Do intel function
+**/
+void InGame::doIntel(){
+	if(computerHandle->x>puck->x){computerHandle->x-=(2<<8);}
+	else{computerHandle->x+=(2<<8);}
+}
 /**
 Do drawing function
 **/
@@ -175,10 +198,10 @@ void InGame::doDrawing(void){
 	PA_DualSetSpriteXY(puck->spriteIndex, puck->getX()-16, puck->getY()-16);
 	
 	//Draw the handle
-	PA_SetSpriteXY(0, // screen
-		handle->spriteIndex, // sprite
-		handle->getX()-16, // x position
-		handle->getY()-16); // y...
+	PA_SetSpriteXY(0,handle->spriteIndex,handle->getX()-16,handle->getY()-16);
+	
+	//Draw computer
+	PA_SetSpriteXY(0,computerHandle->spriteIndex,computerHandle->getX()-16,computerHandle->getY()-16);
 
 	//Draw the goals
 	//Bottom one
@@ -189,33 +212,8 @@ void InGame::doDrawing(void){
 Do collisions function
 **/
 void InGame::doCollisions(void){
-	//Get the square of the max distance
-	u16 maxDistance = (puck->radius+handle->radius)*(puck->radius+handle->radius);
-	// Collision between puck and handle note PA-DISTANCE returns the distance squared 
-	if (PA_Distance(handle->getX(), handle->getY(), puck->getX(), puck->getY()-192-SCREENHOLE) < maxDistance) {
-		u32 overlapDistance = ((puck->radius+handle->radius)-getDistance(handle->getX(), handle->getY(), puck->getX(), puck->getY()-192-SCREENHOLE));
-		
-		
-		handle->speed = ((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2)+1;
-		if(puck->speed>0){puck->speed-=2;}
-		if(handle->speed>puck->speed){puck->speed=handle->speed;}
-		if(puck->speed>20){puck->speed=20;}
-		
-
-		u16 angle = PA_GetAngle(handle->getX(), handle->getY(), puck->getX(), puck->getY()-192-SCREENHOLE); 
-
-		puck->angle = angle;
-		puck->vx = PA_Cos(angle);
-		puck->vy = -PA_Sin(angle);
-		
-		//Displace handle so its outside of puck (move handle away from pucks trajectory)
-		handle->x -= puck->vx*overlapDistance;
-		handle->y -= puck->vy*overlapDistance;
-
-		//Displace puck so its outside of handle move (move puck along its trajectory)
-		puck->x += puck->vx*overlapDistance;
-		puck->y += puck->vy*overlapDistance;
-	}
+	handlePuckCollision(puck,handle);
+	handlePuckCollision(puck,computerHandle);
 	
 	//Add velocity to current puck position (one that moves by itself)
 	puck->x += puck->vx*puck->speed;
@@ -253,7 +251,38 @@ void InGame::doCollisions(void){
 		}
 	}
 }
+/**
+** Puck handle collision routine
+**/
+void InGame::handlePuckCollision(GameObject * puck,GameObject * handle){
+	//Get the square of the max distance
+	u16 maxDistance = (puck->radius+handle->radius)*(puck->radius+handle->radius);
+	// Collision between puck and handle note PA-DISTANCE returns the distance squared 
+	if (PA_Distance(handle->getX(), handle->getY(), puck->getX(), puck->getY()-192-SCREENHOLE) < maxDistance) {
+		u32 overlapDistance = ((puck->radius+handle->radius)-getDistance(handle->getX(), handle->getY(), puck->getX(), puck->getY()-192-SCREENHOLE));
+		
+		
+		handle->speed = ((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2)+1;
+		if(puck->speed>0){puck->speed-=2;}
+		if(handle->speed>puck->speed){puck->speed=handle->speed;}
+		if(puck->speed>20){puck->speed=20;}
+		
 
+		u16 angle = PA_GetAngle(handle->getX(), handle->getY(), puck->getX(), puck->getY()-192-SCREENHOLE); 
+
+		puck->angle = angle;
+		puck->vx = PA_Cos(angle);
+		puck->vy = -PA_Sin(angle);
+		
+		//Displace handle so its outside of puck (move handle away from pucks trajectory)
+		handle->x -= puck->vx*overlapDistance;
+		handle->y -= puck->vy*overlapDistance;
+
+		//Displace puck so its outside of handle move (move puck along its trajectory)
+		puck->x += puck->vx*overlapDistance;
+		puck->y += puck->vy*overlapDistance;
+	}
+}
 /**
 ** Get Proper Euclidian dist
 **/

@@ -1,6 +1,9 @@
 #ifndef __INGAME1__
 #define __INGAME1__
 
+//Internal headers (needed for compiler to understand GameObject object)
+#include "../header/game_object.h"
+
 //Main State constants
 const u16 SCREENHOLE =48;	//How big percieved hole between screens is
 const u16 BORDER = 4;	//Border in pixels around screen (used for collisions)
@@ -43,5 +46,7 @@ class InGame : public State{
 		void processInput(void);
 		inline u32 square(u32 a);
 		void goalScored();
+		void doIntel();
+		void handlePuckCollision(GameObject * puck,GameObject * handle);
 };
 #endif
