@@ -20,6 +20,10 @@
 extern const unsigned char circle_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : sprite0_Pal
 extern const unsigned char handle_image_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : handle_image_Pal
 extern const unsigned char puck_image_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : puck_image_Pal
+extern const unsigned char goal_bottom_left_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : goal_Pal
+extern const unsigned char goal_bottom_right_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : goal_Pal
+extern const unsigned char goal_top_left_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : goal_Pal
+extern const unsigned char goal_top_right_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : goal_Pal
 
 // Background files : 
 extern const int table_top_Info[3]; // BgMode, Width, Height
@@ -34,9 +38,10 @@ extern PAGfx_struct table_bottom; // background pointer
 
 // Palette files : 
 extern const unsigned short sprite0_Pal[2] __attribute__ ((aligned (4))) ;
-extern const unsigned short table_top_Pal[89] __attribute__ ((aligned (4))) ;
+extern const unsigned short table_top_Pal[92] __attribute__ ((aligned (4))) ;
 extern const unsigned short puck_image_Pal[27] __attribute__ ((aligned (4))) ;
 extern const unsigned short handle_image_Pal[167] __attribute__ ((aligned (4))) ;
 extern const unsigned short table_bottom_Pal[116] __attribute__ ((aligned (4))) ;
+extern const unsigned short goal_Pal[87] __attribute__ ((aligned (4))) ;
 #endif
 

@@ -16,6 +16,10 @@ extern "C" {
 #include "table_bottom.c"
 #include "handle_image.c"
 #include "puck_image.c"
+#include "goal_bottom_left.c"
+#include "goal_bottom_right.c"
+#include "goal_top_left.c"
+#include "goal_top_right.c"
 
 // Palette files : 
 #include "sprite0.pal.c"
@@ -23,6 +27,7 @@ extern "C" {
 #include "table_bottom.pal.c"
 #include "handle_image.pal.c"
 #include "puck_image.pal.c"
+#include "goal.pal.c"
 
 // Background Pointers :
 PAGfx_struct table_top = {(void*)table_top_Map, 768, (void*)table_top_Tiles, 49152, (void*)table_top_Pal, (int*)table_top_Info };

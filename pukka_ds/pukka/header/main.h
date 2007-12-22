@@ -10,7 +10,7 @@
 #include "../header/game_object.h"
 
 //Const definitions
-#define DEBUG				//Comment out to turn off debug mode
+//#define DEBUG				//Comment out to turn off debug mode
 void init(void);
 void reset();
 

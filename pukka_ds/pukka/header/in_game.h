@@ -16,18 +16,28 @@ const u16 SWIDTH = 255;
 const u16 PWIDTH = SWIDTH-(BORDER*2);
 const u16 PHEIGHT = SHEIGHT-BORDER;//No border on top
 
-//Defines for max x and y for an entity to be
+//Define max min x for game objects
 const u16 MAXX = SWIDTH - BORDER;
-const u16 MAXY = SHEIGHT - BORDER;
 const u16 MINX = 0+BORDER;
-const u16 MINY = 0+BORDER;
+
+//Defines for max min y for an game object to be screen 0 (bottom)
+const u16 MAXYS0 = SHEIGHT*2+SCREENHOLE - BORDER;
+const u16 MINYS0 = 0+SHEIGHT+SCREENHOLE;
+
+//Defines max min y for game object to be on screen 1 (top)
+const u16 MAXYS1 = SHEIGHT;
+const u16 MINYS1 = 0+BORDER;
+
+//Defines max min y for game object to be dual screen
+const u16 MAXYDUAL = SHEIGHT*2+SCREENHOLE - BORDER;
+const u16 MINYDUAL = 0+BORDER;
 
 //Define for square root LUT size
 const u16 LUTSIZE = 1156;
 
 //Define for goal
-const u16 GOALWIDTH = 100;
-const u16 GOALHEIGHT = 7;
+const u16 GOALWIDTH = 85;
+const u16 GOALHEIGHT = 10;
 
 class InGame : public State{
 	public:
@@ -48,5 +58,7 @@ class InGame : public State{
 		void goalScored();
 		void doIntel();
 		void handlePuckCollision(GameObject * puck,GameObject * handle);
+		void boundaryCheck(GameObject * gameObject,s32 minx,s32 maxx,s32 miny,s32 maxy);
+		void boundaryCheckPuck();
 };
 #endif
