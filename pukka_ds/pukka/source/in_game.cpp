@@ -1,6 +1,9 @@
 //Internal headers
 #include "../header/main.h"
 
+//Sound headers
+#include "puckhandlecollision.h"
+
 // PAGfxConverter Include
 #include "../source/gfx/all_gfx.h"
 #include "../source/gfx/all_gfx.c"
@@ -347,6 +350,10 @@ void InGame::handlePuckCollision(GameObject * puck,GameObject * handle){
 	u16 maxDistance = (puck->radius+handle->radius)*(puck->radius+handle->radius);
 	// Collision between puck and handle note PA-DISTANCE returns the distance squared 
 	if (PA_Distance(handle->getX(), handle->getY(), puck->getX(), puck->getY()) < maxDistance) {
+
+		//Play sound
+		PA_PlaySimpleSound(PA_GetFreeSoundChannel(), puckhandlecollision);
+
 		u32 overlapDistance = ((puck->radius+handle->radius)-getDistance(handle->getX(), handle->getY(), puck->getX(), puck->getY()));
 		
 		if(puck->speed>0){puck->speed-=2;}

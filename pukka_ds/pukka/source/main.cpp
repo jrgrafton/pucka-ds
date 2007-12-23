@@ -21,6 +21,7 @@ void init(void){
 	//Init libs
 	PA_Init();
 	PA_InitVBL();
+	PA_InitSound();  // Init the sound system
 	mainState = new InGame();
 }
 
