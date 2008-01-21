@@ -55,7 +55,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\source\level_splash.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\source\main.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\source\menu.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\source\splash.cpp"
 				>
 			</File>
 		</Filter>
@@ -73,7 +85,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\header\level_splash.h"
+				>
+			</File>
+			<File
 				RelativePath=".\header\main.h"
+				>
+			</File>
+			<File
+				RelativePath=".\header\menu.h"
+				>
+			</File>
+			<File
+				RelativePath=".\header\splash.h"
 				>
 			</File>
 			<File

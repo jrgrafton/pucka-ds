@@ -5,7 +5,7 @@
 class State {
 	public:
 		//Name of state
-		enum NAME { MAINMENU, INGAME};
+		enum NAME { MAINMENU, INGAME, SPLASH, LEVELSPLASH};
 		NAME myName;
 		
 		//Internal state that this state currently holds

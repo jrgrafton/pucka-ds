@@ -1,12 +1,12 @@
 //Internal headers
 #include "../header/main.h"
+#include "../header/game_object.h"
+#include "../header/state.h"
+#include "../header/in_game.h"
+
 
 //Sound headers
 #include "puckhandlecollision.h"
-
-// PAGfxConverter Include
-#include "../source/gfx/all_gfx.h"
-#include "../source/gfx/all_gfx.c"
 
 //Fields of game entitys
 GameObject * puck;
@@ -28,8 +28,8 @@ int hooked =0;
 /**
 **InGame constructor
 **/
-InGame::InGame() : State(){
-	init();
+InGame::InGame(int level) : State(){
+	init(level);
 	myName = INGAME;
 }
 
@@ -42,29 +42,29 @@ InGame::~InGame(){
 /**
 **InGame init allocate resources
 **/
-void InGame::init(){
-	//Init libs
+void InGame::init(int level){
 	myName = INGAME;
 	
-	//Pallete for line drawing
-	PA_SetBgPalCol(0, 1, PA_RGB(255,0, 0));
-	PA_SetBgPalCol(1, 1, PA_RGB(255,0, 0));
+	//Set the virtual distance in screen to SCREENHOLE
+	PA_SetScreenSpace(SCREENHOLE);
 
-	PA_Init8bitBg(0,0);
-	PA_Init8bitBg(1,0);
+	//Initialise sqrtLUT
+	for(u32 i =0;i<LUTSIZE;i++){
+		sqrtLUT[i] = (u32)sqrt(i);
+	}
 
+	//Specify all stuff to do with level
+
+	initGraphics();
+}
+
+void InGame::initGraphics(){
 	PA_EasyBgLoad(1, // screen
 			1, // background number (0-3)
 			table_top); // Background name, used by PAGfx...
 	PA_EasyBgLoad(0, // screen
 			2, // background number (0-3)
 			table_bottom); // Background name, used by PAGfx...
-	
-	
-
-	//Init text on top screen background 0
-	PA_InitText(1,0); // On the top screen
-	PA_SetTextCol(1,0,0,0);
 	
 	//Dual sprite means treat both screens as one
 	//This loads palate that can be used by boths screens (pallate number,ref to pallate data)
@@ -80,21 +80,21 @@ void InGame::init(){
 	handle->spriteIndex=0;
 	handle->width=handle->height=32;
 	handle->radius=16;
-	PA_DualCreateSprite(0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-handle->radius,SHEIGHT*2+SCREENHOLE-BORDER-handle->radius);
+	PA_DualCreateSprite(0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-handle->radius,SHEIGHT*2+SCREENHOLE-BORDER-handle->width);
 	
 	// This will be the puck (sprite number,reference to sprite, size of sprite,colour mode,pallate,xloc,yloc)
 	puck = new GameObject();
 	puck->spriteIndex=1;
 	puck->width=puck->height=30;
 	puck->radius=15;
-	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 0, SWIDTH/2, SHEIGHT+SCREENHOLE+SHEIGHT/2); 
+	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 0, SWIDTH/2-puck->radius, ((u32)((SHEIGHT*1.5)+SCREENHOLE))-puck->radius); 
 
 	// This'll be the computer (only visable on top screen)
 	computerHandle = new GameObject(); 	
 	computerHandle->spriteIndex=2;
 	computerHandle->width=handle->height=32;
 	computerHandle->radius=16;
-	PA_DualCreateSprite(2,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-computerHandle->radius,BORDER+handle->radius);
+	PA_DualCreateSprite(2,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-computerHandle->radius,BORDER);
 	
 	//Load goals (bottom then top)
 	PA_CreateSprite(0,3,(void*)goal_bottom_left_Sprite, OBJ_SIZE_64X64,1, 2, SWIDTH/2-64,SHEIGHT-64);
@@ -118,21 +118,11 @@ void InGame::init(){
 	PA_SetSpriteExtPrio(1, 4, 0);
 
 
-	//Reset state
+	//Reset game objects
 	reset();
-	
-	//Set the virtual distance in screen to SCREENHOLE
-	PA_SetScreenSpace(SCREENHOLE);
-
-	//Initialise sqrtLUT
-	for(u32 i =0;i<LUTSIZE;i++){
-		sqrtLUT[i] = (u32)sqrt(i);
-	}
 }
-/**
-**InGame reset reset all positions speeds scores and trajectorys
-**/
-void InGame::reset(){
+
+void InGame::resetGameObjects(){
 	puck->x = SWIDTH/2<<8; 
 	puck->y = ((u32)((SHEIGHT*1.5)+SCREENHOLE))<<8; // central position on bottom screen
 	puck->vx = 0; 
@@ -150,6 +140,14 @@ void InGame::reset(){
 	computerHandle->vx = 0;
 	computerHandle->vy = 0;
 	computerHandle->speed = 0;
+}
+/**
+**InGame reset whole state
+**/
+void InGame::reset(){
+	resetGameObjects();
+	playerScore =0;
+	computerScore =0;
 }
 /**
 **InGame run
@@ -198,6 +196,7 @@ void InGame::processInput(void){
 	}
 	//Set speed of handle
 	handle->speed = ((u16)(fabs(Stylus.oldVx)+fabs(Stylus.oldVy))/2)+1;
+	handle->speed = (handle->speed>20)? 20:handle->speed;
 
 	//First check if we are hooked or touching
 	if (PA_SpriteTouched(handle->spriteIndex)||hooked){
@@ -217,13 +216,19 @@ void InGame::processInput(void){
 	handle->y=hy<<8;
 }
 /**
-Do intel function
+Do intel function atm very arbitray movement, should really be treated as
+game object with proper speed and trajectory, and then updated accordingly
+however we are trying to keep this as simple as possible!
 **/
 void InGame::doIntel(){
-	//Only reac if puc is on our screen
+	//Only react if puc is on our screen
 	if(puck->getY()<SHEIGHT){
-		if(computerHandle->x>puck->x){computerHandle->x-=(1<<8);}
-		else{computerHandle->x+=(1<<8);}
+		if(computerHandle->x>puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x-=(1<<8);
+		}
+		else if(computerHandle->x<puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x+=(1<<8);
+		}
 		computerHandle->speed=2;
 	}
 }
@@ -234,18 +239,18 @@ void InGame::doDrawing(void){
 	// Since collision is done between top right of one object and centre of moving puc must offset by half sprite size (16px)
 	
 	//This draws the puck
-	PA_DualSetSpriteXY(puck->spriteIndex, puck->getX()-16, puck->getY()-16);
+	PA_DualSetSpriteXY(puck->spriteIndex, puck->getX()-puck->radius, puck->getY()-puck->radius);
 	
 	//Draw the handle
-	PA_DualSetSpriteXY(handle->spriteIndex,handle->getX()-16,handle->getY()-16);
+	PA_DualSetSpriteXY(handle->spriteIndex,handle->getX()-handle->radius,handle->getY()-handle->radius);
 	
 	//Draw computer
-	PA_DualSetSpriteXY(computerHandle->spriteIndex,computerHandle->getX()-16,computerHandle->getY()-16);
+	PA_DualSetSpriteXY(computerHandle->spriteIndex,computerHandle->getX()-computerHandle->radius,computerHandle->getY()-computerHandle->radius);
 
 	//Catch area of bottom one
-	PA_Draw8bitLineEx(0,(SWIDTH/2)-(GOALWIDTH/2),SHEIGHT-BORDER-GOALHEIGHT-1,(SWIDTH/2)+(GOALWIDTH/2), SHEIGHT-BORDER-GOALHEIGHT-1,1,1); 
+	//PA_Draw8bitLineEx(0,(SWIDTH/2)-(GOALWIDTH/2),SHEIGHT-BORDER-GOALHEIGHT-1,(SWIDTH/2)+(GOALWIDTH/2), SHEIGHT-BORDER-GOALHEIGHT-1,1,1); 
 	//Catch area of top one
-	PA_Draw8bitLineEx(1,(SWIDTH/2)-(GOALWIDTH/2),GOALHEIGHT+BORDER+1,(SWIDTH/2)+(GOALWIDTH/2),GOALHEIGHT+BORDER+1,1,1); 
+	//PA_Draw8bitLineEx(1,(SWIDTH/2)-(GOALWIDTH/2),GOALHEIGHT+BORDER+1,(SWIDTH/2)+(GOALWIDTH/2),GOALHEIGHT+BORDER+1,1,1); 
 }	
 
 /**
@@ -352,7 +357,11 @@ void InGame::handlePuckCollision(GameObject * puck,GameObject * handle){
 	if (PA_Distance(handle->getX(), handle->getY(), puck->getX(), puck->getY()) < maxDistance) {
 
 		//Play sound
-		PA_PlaySimpleSound(PA_GetFreeSoundChannel(), puckhandlecollision);
+		//PA_PlaySimpleSound(PA_GetFreeSoundChannel(), puckhandlecollision);
+		uint16 totalSpeed = puck->speed + handle->speed;
+		uint16 volume = (uint16)((127/40)*totalSpeed);
+
+		PA_PlaySound(0,puckhandlecollision,(s32)puckhandlecollision_size,volume,11025);
 
 		u32 overlapDistance = ((puck->radius+handle->radius)-getDistance(handle->getX(), handle->getY(), puck->getX(), puck->getY()));
 		
@@ -408,7 +417,7 @@ void InGame::print_debug(void){
 **Function that gets called when someone scores
 **/
 void InGame::goalScored(){
-	reset();
+	resetGameObjects();
 	goal=0;
 	hooked =0;
 }

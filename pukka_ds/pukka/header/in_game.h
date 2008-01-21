@@ -1,7 +1,6 @@
 #ifndef __INGAME1__
 #define __INGAME1__
 
-//Internal headers (needed for compiler to understand GameObject object)
 #include "../header/game_object.h"
 
 //Main State constants
@@ -36,19 +35,25 @@ const u16 MINYDUAL = 0+BORDER;
 const u16 LUTSIZE = 1156;
 
 //Define for goal
-const u16 GOALWIDTH = 85;
+const u16 GOALWIDTH = 80;
 const u16 GOALHEIGHT = 10;
 
 class InGame : public State{
 	public:
-		InGame();
+		InGame(int level);
 		~InGame();
 		void run();
 		void reset();
-		NAME getMyName();
+		void initGraphics();
+		NAME getMyName(); //Not implemented yet
 	protected:
-		void init();
+		void init(int level);
 	private:
+		int currentLevel;
+		int playerScore;
+		int computerScore;
+
+		void resetGameObjects();
 		void doCollisions(void);
 		u32 getDistance(s16 x1,s16 y1,s16 x2,s16 y2);
 		void doDrawing(void);
@@ -60,5 +65,7 @@ class InGame : public State{
 		void handlePuckCollision(GameObject * puck,GameObject * handle);
 		void boundaryCheck(GameObject * gameObject,s32 minx,s32 maxx,s32 miny,s32 maxy);
 		void boundaryCheckPuck();
+
+		void (*intelPointer) ();
 };
 #endif

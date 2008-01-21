@@ -1,6 +1,5 @@
-//Internal headers
 #include "../header/main.h"
-
+#include "../header/game_object.h"
 
 s16 GameObject::getX(){
 	return x>>8;
