@@ -9,6 +9,7 @@
 
 //Internal include
 #include "../header/state.h"
+#include "../header/level_splash.h"
 
 //Const definitions
 //#define DEBUG				//Comment out to turn off debug mode
@@ -17,8 +18,9 @@ void reset();
 
 //Extern main state so other objects can modify it
 extern State * mainState;
-//Game and level splash is always memory resident
-extern State * currentLevelSplash;
+
+//Level splash is always memory resident
+extern LevelSplash * currentLevelSplash;
 
 
 #endif

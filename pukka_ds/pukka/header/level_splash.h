@@ -8,12 +8,12 @@ class LevelSplash : public State{
 		void run();
 		void reset();
 		NAME getMyName(); //Not implemented yet
-		void increaseLevel();
+		void setLevel(int level);
 		int currentLevel;
 	protected:
 		void init();
 	private:
-		const void* allImages[5];
+		void* allImages[7];
 		
 };
 #endif

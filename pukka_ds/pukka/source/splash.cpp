@@ -59,6 +59,7 @@ void Splash::run(){
 **Splash init function
 **/
 void Splash::init(){
+
 	PA_SetBrightness(0, 31); // all White
 	PA_SetBrightness(1, 31); // all White	
 	

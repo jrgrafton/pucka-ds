@@ -32,7 +32,7 @@ const u16 MAXYDUAL = SHEIGHT*2+SCREENHOLE - BORDER;
 const u16 MINYDUAL = 0+BORDER;
 
 //Define for square root LUT size
-const u16 LUTSIZE = 1156;
+const u16 LUTSIZE = 4624;
 
 //Define for goal
 const u16 GOALWIDTH = 80;
@@ -49,7 +49,6 @@ class InGame : public State{
 	protected:
 		void init(int level);
 	private:
-		int currentLevel;
 		int playerScore;
 		int computerScore;
 
@@ -61,11 +60,21 @@ class InGame : public State{
 		void processInput(void);
 		inline u32 square(u32 a);
 		void goalScored();
-		void doIntel();
+		void doIntel1();
+		void doIntel2();
+		void doIntel3();
+		void doIntel4();
+		void doIntel5();
 		void handlePuckCollision(GameObject * puck,GameObject * handle);
 		void boundaryCheck(GameObject * gameObject,s32 minx,s32 maxx,s32 miny,s32 maxy);
 		void boundaryCheckPuck();
+		
+		//Level dependent stuff
+		int currentLevel;
+		int computerWidth;
+		void (InGame::* intelPointer) ();	    //What AI are we gonna use?
+		void* computerImage;		//What computer image are we going to use
+		int obj_size;
 
-		void (*intelPointer) ();
 };
 #endif

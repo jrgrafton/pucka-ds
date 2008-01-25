@@ -3,7 +3,8 @@
 #include "../header/game_object.h"
 #include "../header/state.h"
 #include "../header/in_game.h"
-
+#include "../header/menu.h"
+#include "../header/splash.h"
 
 //Sound headers
 #include "puckhandlecollision.h"
@@ -16,8 +17,8 @@ GameObject * computerHandle;
 //Lookup table for square root used to calculate overlap distance
 //For it to get to that point x and y locations of entitys must be within
 //At least the product of their radii (give or take 10% for fast function innacruacies)
-//Hence LUT should be (34*34) = 1156 big
-u32 sqrtLUT[1156];
+//Hence LUT should be (68*68) = 4624 big
+u32 sqrtLUT[LUTSIZE];
 
 //Has a goal just been scored
 int goal = 0;
@@ -25,10 +26,18 @@ int goal = 0;
 //Is the stylus currently hooked to the handle
 int hooked =0;
 
+//Score
+int playerScore=0;
+int computerScore=0;
+
+//Are we in game?
+bool inGame;
+
 /**
 **InGame constructor
 **/
 InGame::InGame(int level) : State(){
+	inGame=1;
 	init(level);
 	myName = INGAME;
 }
@@ -37,7 +46,14 @@ InGame::InGame(int level) : State(){
 **InGame constructor
 **/
 InGame::~InGame(){
-
+	delete puck;
+	delete handle;
+	delete computerHandle;
+	PA_ResetBgSys();
+	PA_ResetSpriteSys();
+	PA_InitSpriteExtPrio(0);
+	PA_ClearTextBg(0);
+	PA_StopSound(0);
 }
 /**
 **InGame init allocate resources
@@ -52,55 +68,101 @@ void InGame::init(int level){
 	for(u32 i =0;i<LUTSIZE;i++){
 		sqrtLUT[i] = (u32)sqrt(i);
 	}
+	computerScore=0;
+	playerScore=0;
+	
+	currentLevel=level;
+	obj_size=2;
+
+	switch(currentLevel){
+		case 0:
+			computerImage = (void*)char1_image_Sprite;
+			computerWidth = 32;
+			intelPointer = &InGame::doIntel1;
+		break;
+		case 1:
+			computerImage=(void*)char2_image_Sprite;
+			computerWidth = 32;
+			intelPointer = &InGame::doIntel2;
+		break;
+		case 2:
+			computerImage=(void*)char3_image_Sprite;
+			computerWidth = 32;
+			intelPointer = &InGame::doIntel3;
+		break;
+		case 3:
+			computerImage=(void*)char4_image_Sprite;
+			computerWidth = 32;
+			intelPointer = &InGame::doIntel4;
+		break;
+		case 4:
+			computerImage=(void*)char5_image_Sprite;
+			computerWidth = 64;
+			intelPointer = &InGame::doIntel5;
+			obj_size=3;
+		break;
+	}
+
 
 	//Specify all stuff to do with level
-
 	initGraphics();
 }
 
 void InGame::initGraphics(){
+	
+	PA_InitText(1,0); // On the top screen
+	PA_SetTextCol(1,0,0,0);
+	PA_SetScreenSpace(SCREENHOLE);
+
 	PA_EasyBgLoad(1, // screen
 			1, // background number (0-3)
 			table_top); // Background name, used by PAGfx...
 	PA_EasyBgLoad(0, // screen
 			2, // background number (0-3)
 			table_bottom); // Background name, used by PAGfx...
-	
+
 	//Dual sprite means treat both screens as one
-	//This loads palate that can be used by boths screens (pallate number,ref to pallate data)
-	//Note atm same palate is being used for both sprites
-	PA_DualLoadSpritePal(0, (void*)puck_image_Pal);
-	PA_DualLoadSpritePal(1, (void*)handle_image_Pal);
+	PA_DualLoadSpritePal(0,(void*)char1_image_Pal);
+	PA_DualLoadSpritePal(1,(void*)char2_image_Pal);
+	PA_DualLoadSpritePal(2,(void*)char3_image_Pal);
+	PA_DualLoadSpritePal(3,(void*)char4_image_Pal);
+	PA_DualLoadSpritePal(4,(void*)char5_image_Pal);
+
+	PA_DualLoadSpritePal(5, (void*)puck_image_Pal);
+	PA_DualLoadSpritePal(6, (void*)handle_image_Pal);
 
 	//Local pallete for top and bottom goals
-	PA_DualLoadSpritePal(2,(void*)goal_Pal);
+	PA_DualLoadSpritePal(7,(void*)goal_Pal);
 	
 	// This'll be the handle->..(only visable on bottom screen)
 	handle = new GameObject(); 	
 	handle->spriteIndex=0;
 	handle->width=handle->height=32;
 	handle->radius=16;
-	PA_DualCreateSprite(0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-handle->radius,SHEIGHT*2+SCREENHOLE-BORDER-handle->width);
+	handle->speed=0;
+	PA_DualCreateSprite(0,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 6, SWIDTH/2-handle->radius,SHEIGHT*2+SCREENHOLE-BORDER-handle->width);
 	
 	// This will be the puck (sprite number,reference to sprite, size of sprite,colour mode,pallate,xloc,yloc)
 	puck = new GameObject();
 	puck->spriteIndex=1;
 	puck->width=puck->height=30;
 	puck->radius=15;
-	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 0, SWIDTH/2-puck->radius, ((u32)((SHEIGHT*1.5)+SCREENHOLE))-puck->radius); 
+	puck->speed=0;
+	PA_DualCreateSprite(1,(void*)puck_image_Sprite, OBJ_SIZE_32X32,1, 5, SWIDTH/2-puck->radius, ((u32)((SHEIGHT*1.5)+SCREENHOLE))-puck->radius); 
 
 	// This'll be the computer (only visable on top screen)
 	computerHandle = new GameObject(); 	
 	computerHandle->spriteIndex=2;
-	computerHandle->width=handle->height=32;
-	computerHandle->radius=16;
-	PA_DualCreateSprite(2,(void*)handle_image_Sprite, OBJ_SIZE_32X32,1, 1, SWIDTH/2-computerHandle->radius,BORDER);
+	computerHandle->width=handle->height=computerWidth;
+	computerHandle->radius=computerWidth/2;
+	computerHandle->speed=0;
+	PA_DualCreateSprite(2,computerImage,0,obj_size,1, currentLevel, SWIDTH/2-computerHandle->radius,BORDER+computerHandle->radius);
 	
 	//Load goals (bottom then top)
-	PA_CreateSprite(0,3,(void*)goal_bottom_left_Sprite, OBJ_SIZE_64X64,1, 2, SWIDTH/2-64,SHEIGHT-64);
-	PA_CreateSprite(0,4,(void*)goal_bottom_right_Sprite, OBJ_SIZE_64X64,1, 2, SWIDTH/2,SHEIGHT-64);
-	PA_CreateSprite(1,3,(void*)goal_top_left_Sprite, OBJ_SIZE_64X64,1, 2, SWIDTH/2-64,0);
-	PA_CreateSprite(1,4,(void*)goal_top_right_Sprite, OBJ_SIZE_64X64,1, 2, SWIDTH/2,0);
+	PA_CreateSprite(0,3,(void*)goal_bottom_left_Sprite, OBJ_SIZE_64X64,1, 7, SWIDTH/2-64,SHEIGHT-64);
+	PA_CreateSprite(0,4,(void*)goal_bottom_right_Sprite, OBJ_SIZE_64X64,1, 7, SWIDTH/2,SHEIGHT-64);
+	PA_CreateSprite(1,3,(void*)goal_top_left_Sprite, OBJ_SIZE_64X64,1, 7, SWIDTH/2-64,0);
+	PA_CreateSprite(1,4,(void*)goal_top_right_Sprite, OBJ_SIZE_64X64,1, 7, SWIDTH/2,0);
 	
 	//Make sure everything gets drawn in the right order
 	PA_InitSpriteExtPrio(1); // Enable extended priorities
@@ -136,7 +198,7 @@ void InGame::resetGameObjects(){
 	handle->speed = 0;
 
 	computerHandle->x = SWIDTH/2<<8; 
-	computerHandle->y = BORDER+handle->radius<<8;
+	computerHandle->y = BORDER+handle->radius+computerHandle->radius<<8;
 	computerHandle->vx = 0;
 	computerHandle->vy = 0;
 	computerHandle->speed = 0;
@@ -153,13 +215,13 @@ void InGame::reset(){
 **InGame run
 **/
 void InGame::run(){
-	while(1)
+	while(inGame)
 	{
 		//Process input
 		processInput();
 		
 		//Do intel
-		doIntel();
+		(this->*intelPointer)();
 
 		//Do collisions
 		doCollisions();
@@ -219,18 +281,140 @@ void InGame::processInput(void){
 Do intel function atm very arbitray movement, should really be treated as
 game object with proper speed and trajectory, and then updated accordingly
 however we are trying to keep this as simple as possible!
+Originally it was concieved that each levels AI could behave completly differently
+(hence function for each level with pointer)
+however it ended up easier just to adjust simple variables, meaning it may have been
+better design to have just included this values in a simple AI object and have had 
+a singular do AI routine.
 **/
-void InGame::doIntel(){
+
+void InGame::doIntel1(){
+	computerHandle->speed=2;
+	
+	static int waiting=0;
+	int waitingPeriod = 120;
+	static int timeSpentWaiting=0;
+
+
 	//Only react if puc is on our screen
-	if(puck->getY()<SHEIGHT){
+	if(puck->getY()<SHEIGHT&&puck->getX()>computerHandle->radius+16&&puck->getX()<SWIDTH-computerHandle->radius-16){
+		if(waiting){
+			timeSpentWaiting++;
+			if(timeSpentWaiting>=waitingPeriod){
+				waiting=0;
+				timeSpentWaiting=0;
+			}
+			return;
+		}
+
+		if(PA_RandMinMax(1,600)==1){
+			waiting = 1;
+		}
+		
 		if(computerHandle->x>puck->x&&puck->y>computerHandle->y+2){
-			computerHandle->x-=(1<<8);
+			computerHandle->x-=((1<<8)/2);
 		}
 		else if(computerHandle->x<puck->x&&puck->y>computerHandle->y+2){
-			computerHandle->x+=(1<<8);
+			computerHandle->x+=((1<<8)/2);
 		}
-		computerHandle->speed=2;
+		if(puck->angle==0||puck->angle==256){computerHandle->y-=((1<<8)/30);}
+		else if(computerHandle->getY()<BORDER+handle->radius+computerHandle->radius){computerHandle->y+=((1<<8)/30);}
 	}
+}
+void InGame::doIntel2(){
+	computerHandle->speed=4;
+
+	static int waiting=0;
+	int waitingPeriod = 60;
+	static int timeSpentWaiting=0;
+
+
+	//Only react if puc is on our screen
+	if(puck->getY()<SHEIGHT&&puck->getX()>computerHandle->radius+16&&puck->getX()<SWIDTH-computerHandle->radius-16){
+		if(waiting){
+			timeSpentWaiting++;
+			if(timeSpentWaiting==waitingPeriod){
+				waiting=0;
+				timeSpentWaiting=0;
+			}
+			return;
+		}
+
+		if(PA_RandMinMax(1,1000)==1){
+			waiting = 1;
+		}
+		if(computerHandle->x>puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x-=((1<<8));
+		}
+		else if(computerHandle->x<puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x+=((1<<8));
+		}
+		if(puck->angle==0||puck->angle==256){computerHandle->y-=((1<<8)/30);}
+		else if(computerHandle->getY()<BORDER+handle->radius+computerHandle->radius){computerHandle->y+=((1<<8)/30);}
+	}
+}
+void InGame::doIntel3(){
+	computerHandle->speed=12;
+
+	static int waiting=0;
+	int waitingPeriod = 60;
+	static int timeSpentWaiting=0;
+
+
+	//Only react if puc is on our screen
+	if(puck->getY()<SHEIGHT&&puck->getX()>computerHandle->radius+16&&puck->getX()<SWIDTH-computerHandle->radius-16){
+		if(waiting){
+			timeSpentWaiting++;
+			if(timeSpentWaiting==waitingPeriod){
+				waiting=0;
+				timeSpentWaiting=0;
+			}
+			return;
+		}
+
+		if(PA_RandMinMax(1,2000)==1){
+			waiting = 1;
+		}
+		if(computerHandle->x>puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x-=((1<<8));
+		}
+		else if(computerHandle->x<puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x+=((1<<8));
+		}
+		if(puck->angle==0||puck->angle==256){computerHandle->y-=((1<<8)/30);}
+		else if(computerHandle->getY()<BORDER+handle->radius+computerHandle->radius){computerHandle->y+=((1<<8)/30);}
+	}
+}
+void InGame::doIntel4(){
+	computerHandle->speed=12;
+
+	//Only react if puc is on our screen
+	if(puck->getY()<SHEIGHT&&puck->getX()>computerHandle->radius+16&&puck->getX()<SWIDTH-computerHandle->radius-16){
+		if(computerHandle->x>puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x-=((s32)((1<<8)/2*1.5));
+		}
+		else if(computerHandle->x<puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x+=((s32)((1<<8)/2*1.5));
+		}
+		if(puck->angle==0||puck->angle==256){computerHandle->y-=((1<<8)/30);}
+		else if(computerHandle->getY()<BORDER+handle->radius+computerHandle->radius){computerHandle->y+=((1<<8)/30);}
+	}
+}
+void InGame::doIntel5(){
+	computerHandle->speed=14;
+
+	//Only react if puc is on our screen
+	if(puck->getY()<SHEIGHT&&puck->getX()>computerHandle->radius+16&&puck->getX()<SWIDTH-computerHandle->radius-16){
+		if(computerHandle->x>puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x-=((1<<8));
+		}
+		else if(computerHandle->x<puck->x&&puck->y>computerHandle->y+2){
+			computerHandle->x+=((1<<8));
+		}
+		if(puck->angle==0||puck->angle==256){computerHandle->y-=((1<<8)/30);}
+		else if(computerHandle->getY()<BORDER+handle->radius+computerHandle->radius){computerHandle->y+=((1<<8)/30);}
+	}
+
 }
 /**
 Do drawing function
@@ -247,10 +431,8 @@ void InGame::doDrawing(void){
 	//Draw computer
 	PA_DualSetSpriteXY(computerHandle->spriteIndex,computerHandle->getX()-computerHandle->radius,computerHandle->getY()-computerHandle->radius);
 
-	//Catch area of bottom one
-	//PA_Draw8bitLineEx(0,(SWIDTH/2)-(GOALWIDTH/2),SHEIGHT-BORDER-GOALHEIGHT-1,(SWIDTH/2)+(GOALWIDTH/2), SHEIGHT-BORDER-GOALHEIGHT-1,1,1); 
-	//Catch area of top one
-	//PA_Draw8bitLineEx(1,(SWIDTH/2)-(GOALWIDTH/2),GOALHEIGHT+BORDER+1,(SWIDTH/2)+(GOALWIDTH/2),GOALHEIGHT+BORDER+1,1,1); 
+	PA_ClearTextBg(0);
+	PA_OutputText(0, 0, 1, "Us:%d Them:%d",playerScore,computerScore);
 }	
 
 /**
@@ -321,6 +503,7 @@ void InGame::boundaryCheckPuck(){
 			puck->vx = -1;
 			//Has the puck gone all the way into the goal?
 			if(puck->getY()+puck->radius<MINYDUAL){
+				playerScore++;
 				goalScored();
 			}
 		}
@@ -337,6 +520,7 @@ void InGame::boundaryCheckPuck(){
 			puck->vx = 0;
 			//Has the puck gone all the way into the goal?
 			if(puck->getY()-puck->radius>MAXYDUAL){
+				computerScore++;
 				goalScored();
 			}
 		}
@@ -351,13 +535,14 @@ void InGame::boundaryCheckPuck(){
 ** Puck handle collision routine
 **/
 void InGame::handlePuckCollision(GameObject * puck,GameObject * handle){
+	//PA_ClearTextBg(1);
+
 	//Get the square of the max distance
 	u16 maxDistance = (puck->radius+handle->radius)*(puck->radius+handle->radius);
 	// Collision between puck and handle note PA-DISTANCE returns the distance squared 
 	if (PA_Distance(handle->getX(), handle->getY(), puck->getX(), puck->getY()) < maxDistance) {
-
+		
 		//Play sound
-		//PA_PlaySimpleSound(PA_GetFreeSoundChannel(), puckhandlecollision);
 		uint16 totalSpeed = puck->speed + handle->speed;
 		uint16 volume = (uint16)((127/40)*totalSpeed);
 
@@ -365,12 +550,11 @@ void InGame::handlePuckCollision(GameObject * puck,GameObject * handle){
 
 		u32 overlapDistance = ((puck->radius+handle->radius)-getDistance(handle->getX(), handle->getY(), puck->getX(), puck->getY()));
 		
+		u16 angle = PA_GetAngle(handle->getX(), handle->getY(), puck->getX(), puck->getY()); 
+
 		if(puck->speed>0){puck->speed-=2;}
 		if(handle->speed>puck->speed){puck->speed=handle->speed;}
 		if(puck->speed>20){puck->speed=20;}
-		
-
-		u16 angle = PA_GetAngle(handle->getX(), handle->getY(), puck->getX(), puck->getY()); 
 
 		puck->angle = angle;
 		puck->vx = PA_Cos(angle);
@@ -406,11 +590,7 @@ wanna print to screen
 void InGame::print_debug(void){
 	//Debug stuff for velocity (printf in lib doesnt support \n)
 	PA_ClearTextBg(1);
-	PA_OutputText(1, 0, 1, "Velocity is: x:%d y:%d",puck->vx,puck->vy);
-	PA_OutputText(1, 0, 2, "Positon is: x:%d y:%d",puck->getX(),puck->getY());
-	PA_OutputText(1, 0, 3, "Speed is: %d",handle->speed);
-	PA_OutputText(1, 0, 4, "Angle: %d",puck->angle);
-	PA_OutputText(1, 0, 5, "Goal is: %d",goal);
+	PA_OutputText(1, 0, 6, "Current level is: %d",currentLevel);
 }
 
 /**
@@ -420,4 +600,20 @@ void InGame::goalScored(){
 	resetGameObjects();
 	goal=0;
 	hooked =0;
+
+	if(computerScore==5){
+		currentLevelSplash->setLevel(6);
+		inGame=0;
+		delete mainState;
+		mainState = currentLevelSplash;
+		PA_WaitForVBL();
+	}
+
+	else if(playerScore==5){
+		currentLevelSplash->setLevel(currentLevel+1);
+		inGame=0;
+		delete mainState;
+		mainState = currentLevelSplash;
+		PA_WaitForVBL();
+	}
 }

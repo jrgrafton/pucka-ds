@@ -24,6 +24,11 @@ extern const unsigned char goal_bottom_left_Sprite[4096] __attribute__ ((aligned
 extern const unsigned char goal_bottom_right_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : goal_Pal
 extern const unsigned char goal_top_left_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : goal_Pal
 extern const unsigned char goal_top_right_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : goal_Pal
+extern const unsigned char char1_image_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : char1_image_Pal
+extern const unsigned char char2_image_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : char2_image_Pal
+extern const unsigned char char3_image_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : char3_image_Pal
+extern const unsigned char char4_image_Sprite[1024] __attribute__ ((aligned (4))) ;  // Pal : char4_image_Pal
+extern const unsigned char char5_image_Sprite[4096] __attribute__ ((aligned (4))) ;  // Pal : char5_image_Pal
 
 // Background files : 
 extern const int table_top_Info[3]; // BgMode, Width, Height
@@ -43,5 +48,10 @@ extern const unsigned short puck_image_Pal[27] __attribute__ ((aligned (4))) ;
 extern const unsigned short handle_image_Pal[167] __attribute__ ((aligned (4))) ;
 extern const unsigned short table_bottom_Pal[116] __attribute__ ((aligned (4))) ;
 extern const unsigned short goal_Pal[87] __attribute__ ((aligned (4))) ;
+extern const unsigned short char1_image_Pal[215] __attribute__ ((aligned (4))) ;
+extern const unsigned short char2_image_Pal[225] __attribute__ ((aligned (4))) ;
+extern const unsigned short char3_image_Pal[233] __attribute__ ((aligned (4))) ;
+extern const unsigned short char4_image_Pal[232] __attribute__ ((aligned (4))) ;
+extern const unsigned short char5_image_Pal[238] __attribute__ ((aligned (4))) ;
 #endif
 

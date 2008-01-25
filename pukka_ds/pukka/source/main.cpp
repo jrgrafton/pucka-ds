@@ -8,7 +8,7 @@
 #include "../source/gfx/all_gfx.c"
 
 State * mainState;
-State * currentLevelSplash;
+LevelSplash * currentLevelSplash;
 
 int main(void){
 	//Initialise everything
@@ -32,11 +32,6 @@ void init(void){
 	PA_Init8bitBg(0,0); //Init backgrounds
 	PA_Init8bitBg(1,0);
 	
-	//Init text
-	PA_InitText(1,0); // On the top screen
-	PA_InitText(0,0); // On the bottom screen
-	PA_SetTextCol(1,0,0,0);
-	PA_SetTextCol(0,31,31,31);
 	mainState = new Splash();
 
 	//Keep in game and levelsplash memeory resident
