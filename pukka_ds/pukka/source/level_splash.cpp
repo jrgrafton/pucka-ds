@@ -5,14 +5,21 @@
 #include "../header/level_splash.h"
 #include "../header/in_game.h"
 
+//Image includes
 #include "char1_splash_image.h"
 #include "char2_splash_image.h"
 #include "char3_splash_image.h"
 #include "char4_splash_image.h"
 #include "char5_splash_image.h"
-
 #include "win_image.h"
 #include "lose_image.h"
+
+//Sound includes
+#include "win_music.h"
+#include "lose_music.h"
+#include "main_music.h"
+
+
 
 /**
 **LevelSplash constructor
@@ -34,6 +41,16 @@ LevelSplash::~LevelSplash(){
 void LevelSplash::run(){
 	PA_Init8bitBg(0,0); //Init backgrounds
 
+	if(currentLevel==5){
+		PA_PlaySimpleSound(0, lose_music);
+	}
+	else if(currentLevel==6){
+		PA_PlaySimpleSound(0, win_music);
+	}
+	else if(currentLevel>0){
+		PA_PlaySoundRepeat(0, main_music);
+	}
+
 	PA_LoadGif(	0, allImages[currentLevel]); // Gif File
 
 	for(uint i = -5; i <= 0; i++){
@@ -44,6 +61,7 @@ void LevelSplash::run(){
 		PA_WaitForVBL();
 	}
 	PA_ResetBgSys();
+	PA_StopSound(0);
 
 	//Switch to main game state or menu state
 	if(currentLevel==5||currentLevel==6){
@@ -52,7 +70,7 @@ void LevelSplash::run(){
 		PA_WaitForVBL();
 	}
 	else{
-		mainState = new InGame(0);
+		mainState = new InGame(currentLevel);
 		PA_WaitForVBL();
 	}
 }

@@ -8,6 +8,8 @@
 
 //Sound headers
 #include "puckhandlecollision.h"
+#include "player_score.h"
+#include "computer_score.h"
 
 //Fields of game entitys
 GameObject * puck;
@@ -32,6 +34,9 @@ int computerScore=0;
 
 //Are we in game?
 bool inGame;
+
+//Array of numbers for score
+void* allNumbers[10];
 
 /**
 **InGame constructor
@@ -109,16 +114,18 @@ void InGame::init(int level){
 }
 
 void InGame::initGraphics(){
-	
-	PA_InitText(1,0); // On the top screen
-	PA_SetTextCol(1,0,0,0);
+	#ifdef DEBUG
+		PA_InitText(1,0); // On the top screen
+		PA_SetTextCol(1,0,0,0);
+	#endif
+
 	PA_SetScreenSpace(SCREENHOLE);
 
 	PA_EasyBgLoad(1, // screen
 			1, // background number (0-3)
 			table_top); // Background name, used by PAGfx...
 	PA_EasyBgLoad(0, // screen
-			2, // background number (0-3)
+			1, // background number (0-3)
 			table_bottom); // Background name, used by PAGfx...
 
 	//Dual sprite means treat both screens as one
@@ -127,12 +134,10 @@ void InGame::initGraphics(){
 	PA_DualLoadSpritePal(2,(void*)char3_image_Pal);
 	PA_DualLoadSpritePal(3,(void*)char4_image_Pal);
 	PA_DualLoadSpritePal(4,(void*)char5_image_Pal);
-
-	PA_DualLoadSpritePal(5, (void*)puck_image_Pal);
-	PA_DualLoadSpritePal(6, (void*)handle_image_Pal);
-
-	//Local pallete for top and bottom goals
+	PA_DualLoadSpritePal(5,(void*)puck_image_Pal);
+	PA_DualLoadSpritePal(6,(void*)handle_image_Pal);
 	PA_DualLoadSpritePal(7,(void*)goal_Pal);
+	PA_DualLoadSpritePal(8,(void*)goal_score_Pal);
 	
 	// This'll be the handle->..(only visable on bottom screen)
 	handle = new GameObject(); 	
@@ -178,6 +183,18 @@ void InGame::initGraphics(){
 	PA_SetSpriteExtPrio(0, 4, 0);
 	PA_SetSpriteExtPrio(1, 3, 0);
 	PA_SetSpriteExtPrio(1, 4, 0);
+
+	//Fill up numbers array
+	allNumbers[0] = (void*)number0_Sprite;
+	allNumbers[1] = (void*)number1_Sprite;
+	allNumbers[2] = (void*)number2_Sprite;
+	allNumbers[3] = (void*)number3_Sprite;
+	allNumbers[4] = (void*)number4_Sprite;
+	allNumbers[5] = (void*)number5_Sprite;
+	allNumbers[6] = (void*)number6_Sprite;
+	allNumbers[7] = (void*)number7_Sprite;
+	allNumbers[8] = (void*)number8_Sprite;
+	allNumbers[9] = (void*)number9_Sprite;
 
 
 	//Reset game objects
@@ -430,9 +447,6 @@ void InGame::doDrawing(void){
 	
 	//Draw computer
 	PA_DualSetSpriteXY(computerHandle->spriteIndex,computerHandle->getX()-computerHandle->radius,computerHandle->getY()-computerHandle->radius);
-
-	PA_ClearTextBg(0);
-	PA_OutputText(0, 0, 1, "Us:%d Them:%d",playerScore,computerScore);
 }	
 
 /**
@@ -503,8 +517,7 @@ void InGame::boundaryCheckPuck(){
 			puck->vx = -1;
 			//Has the puck gone all the way into the goal?
 			if(puck->getY()+puck->radius<MINYDUAL){
-				playerScore++;
-				goalScored();
+				goalScored(0);
 			}
 		}
 		else{
@@ -520,8 +533,7 @@ void InGame::boundaryCheckPuck(){
 			puck->vx = 0;
 			//Has the puck gone all the way into the goal?
 			if(puck->getY()-puck->radius>MAXYDUAL){
-				computerScore++;
-				goalScored();
+				goalScored(1);
 			}
 		}
 		else{
@@ -588,32 +600,81 @@ Temporary debug function, put everything here that you
 wanna print to screen
 **/
 void InGame::print_debug(void){
-	//Debug stuff for velocity (printf in lib doesnt support \n)
 	PA_ClearTextBg(1);
-	PA_OutputText(1, 0, 6, "Current level is: %d",currentLevel);
+
+	//Put your debug print statements here.... make sure to print to screen 1
 }
 
 /**
 **Function that gets called when someone scores
 **/
-void InGame::goalScored(){
+void InGame::goalScored(int computerScored){
 	resetGameObjects();
+	doDrawing();
 	goal=0;
 	hooked =0;
-
-	if(computerScore==5){
-		currentLevelSplash->setLevel(6);
-		inGame=0;
-		delete mainState;
-		mainState = currentLevelSplash;
-		PA_WaitForVBL();
+	
+	if(computerScored){
+		PA_PlaySimpleSound(0, computer_score);
+		computerScore++;
+		drawScore(1);
+		if(computerScore==5){
+			currentLevelSplash->setLevel(6);
+			inGame=0;
+			delete mainState;
+			mainState = currentLevelSplash;
+			PA_WaitForVBL();
+		}
 	}
+	else{
+		PA_PlaySimpleSound(0, player_score);
+		playerScore++;
+		drawScore(0);
+		if(playerScore==5){
+			currentLevelSplash->setLevel(currentLevel+1);
+			inGame=0;
+			delete mainState;
+			mainState = currentLevelSplash;
+			PA_WaitForVBL();
+		}
+	}
+}
 
-	else if(playerScore==5){
-		currentLevelSplash->setLevel(currentLevel+1);
-		inGame=0;
-		delete mainState;
-		mainState = currentLevelSplash;
+void InGame::drawScore(int screen){
+	
+	uint16 startx=64;
+	uint16 starty=60;
+	int i=0;
+	
+	//Goal! sprite
+	PA_CreateSprite(screen,5,(void*)goal1_Sprite,OBJ_SIZE_32X32,1,8,startx, starty);
+	PA_CreateSprite(screen,6,(void*)goal2_Sprite,OBJ_SIZE_32X32,1,8,startx+32, starty);
+	PA_CreateSprite(screen,7,(void*)goal3_Sprite,OBJ_SIZE_32X32,1,8,startx+64, starty);
+	PA_CreateSprite(screen,8,(void*)goal4_Sprite,OBJ_SIZE_32X32,1,8,startx+96, starty);
+	
+	starty+=32;
+
+	//Scoreboard
+	PA_CreateSprite(screen,9,(void*)scoreboard1_Sprite,OBJ_SIZE_32X32,1,8,startx, starty);
+	PA_CreateSprite(screen,10,(void*)scoreboard2_Sprite,OBJ_SIZE_32X32,1,8,startx+32, starty);
+	PA_CreateSprite(screen,11,(void*)scoreboard3_Sprite,OBJ_SIZE_32X32,1,8,startx+64, starty);
+	PA_CreateSprite(screen,12,(void*)scoreboard4_Sprite,OBJ_SIZE_32X32,1,8,startx+96, starty);
+	
+	startx+=20;
+	//Draw Score
+	PA_CreateSprite(screen,13,allNumbers[playerScore],OBJ_SIZE_32X32,1,8,startx, starty);
+	PA_CreateSprite(screen,14,allNumbers[computerScore],OBJ_SIZE_32X32,1,8,startx+57, starty);
+	
+	
+	for (i = 5; i < 15; i++) {
+		PA_SetSpriteExtPrio(screen, i, 15-i);
+	}	
+
+	for (i = 0; i <= 120; i++) {
 		PA_WaitForVBL();
+	}	
+	
+	for (i = 5; i < 15; i++) {
+		PA_DeleteSprite(screen, i);
 	}
 }

@@ -59,7 +59,8 @@ class InGame : public State{
 		void print_debug(void);
 		void processInput(void);
 		inline u32 square(u32 a);
-		void goalScored();
+		void goalScored(int computerScored);
+		void drawScore(int screen);
 		void doIntel1();
 		void doIntel2();
 		void doIntel3();

@@ -4,7 +4,7 @@
 #include "../header/menu.h"
 #include "../header/level_splash.h"
 #include "main_image.h"
-#include "music.h"  // Include the sound (found in the data folder in .raw format)
+#include "main_music.h"  // Include the sound (found in the data folder in .raw format)
 
 
 /**
@@ -35,7 +35,7 @@ void Menu::run(){
 					  i); // Time, 0 being the screen completely visible, 32 completely out
 		PA_WaitForVBL(); // To slow down the fades, we wait a frame...
 	}
-	PA_PlaySoundRepeat(0, music);
+	PA_PlaySoundRepeat(0, main_music);
 	while(!Stylus.Newpress){ // Display until keys pressed
 		PA_WaitForVBL();
 	}
@@ -49,7 +49,6 @@ void Menu::run(){
 	PA_WaitForVBL();
 
 	//Switch to level splash
-	PA_StopSound(0);
 	delete mainState;
 	mainState = currentLevelSplash;
 }
