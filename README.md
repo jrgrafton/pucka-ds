@@ -1,7 +1,7 @@
 Pucka DS
 ========
 
-Simple Air Hocky game written back in 2007 compatible with:
+Simple Air Hocky game written in 2007 for the:
 * Nintendo DS
 * Gameboy Advance
 
